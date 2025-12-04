@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Millikan Oil Drop Simulator</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="app-header">
+      <div>
+        <h1>Millikan Oil Drop Lab</h1>
+        <p>Play with gravity, charge, and electric fields to recreate Millikan's famous experiment.</p>
+      </div>
+      <div class="run-indicator" id="runIndicator">running</div>
+    </header>
+
+    <section class="workspace">
+      <section class="visual-pane">
+        <canvas id="simCanvas" width="720" height="440" aria-label="Oil drop visualization"></canvas>
+        <div class="plate plate-top">+ Plate</div>
+        <div class="plate plate-bottom">- Plate</div>
+        <div class="hint-card">
+          <p>Drag sliders to change the field, charge, and droplet size. Click the drop to inject or remove charge.</p>
+          <p>Use the pulse button to briefly flip the field like Millikan's balancing trick.</p>
+        </div>
+      </section>
+
+      <section class="control-pane">
+        <div class="control-grid">
+          <label class="control">
+            <span>Plate voltage (kV)</span>
+            <div class="control-inputs">
+              <input type="range" id="voltageControl" min="0" max="8" step="0.1" value="2.0" />
+              <input type="number" id="voltageNumber" min="0" max="8" step="0.1" value="2.0" />
+            </div>
+          </label>
+          <label class="control">
+            <span>Plate gap (mm)</span>
+            <div class="control-inputs">
+              <input type="range" id="gapControl" min="2" max="10" step="0.1" value="5" />
+              <input type="number" id="gapNumber" min="2" max="10" step="0.1" value="5" />
+            </div>
+          </label>
+          <label class="control">
+            <span>Drop radius (µm)</span>
+            <div class="control-inputs">
+              <input type="range" id="radiusControl" min="0.3" max="1.5" step="0.05" value="0.9" />
+              <input type="number" id="radiusNumber" min="0.3" max="1.5" step="0.05" value="0.9" />
+            </div>
+          </label>
+          <label class="control">
+            <span>Charge multiples (±e)</span>
+            <div class="control-inputs">
+              <input type="range" id="chargeControl" min="-25" max="25" step="1" value="-8" />
+              <input type="number" id="chargeNumber" min="-25" max="25" step="1" value="-8" />
+            </div>
+          </label>
+          <label class="control">
+            <span>Temperature (K)</span>
+            <div class="control-inputs">
+              <input type="range" id="temperatureControl" min="260" max="330" step="1" value="295" />
+              <input type="number" id="temperatureNumber" min="260" max="330" step="1" value="295" />
+            </div>
+          </label>
+          <label class="control">
+            <span>Brownian boost</span>
+            <div class="control-inputs">
+              <input type="range" id="noiseControl" min="0" max="2" step="0.05" value="1" />
+              <input type="number" id="noiseNumber" min="0" max="2" step="0.05" value="1" />
+            </div>
+          </label>
+          <label class="control">
+            <span>Air viscosity (×10⁻⁵ Pa·s)</span>
+            <div class="control-inputs">
+              <input type="range" id="viscosityControl" min="1" max="3" step="0.05" value="1.8" />
+              <input type="number" id="viscosityNumber" min="1" max="3" step="0.05" value="1.8" />
+            </div>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <label><input type="checkbox" id="fieldToggle" checked /> Field on</label>
+          <label><input type="checkbox" id="trailToggle" checked /> Trail</label>
+          <label><input type="checkbox" id="gridToggle" checked /> Grid</label>
+        </div>
+
+        <div class="button-row">
+          <button id="playPauseBtn">Pause</button>
+          <button id="newDropBtn">New drop</button>
+          <button id="resetBtn">Reset</button>
+          <button id="pulseBtn">Pulse field</button>
+          <button id="zeroBtn">Zero velocity</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="readout" id="readoutPanel">
+      <div>
+        <span class="label">Electric field</span>
+        <span class="value" id="fieldReadout">0</span>
+      </div>
+      <div>
+        <span class="label">Charge</span>
+        <span class="value" id="chargeReadout">0</span>
+      </div>
+      <div>
+        <span class="label">Gravity vs. electric</span>
+        <span class="value" id="forceReadout">0</span>
+      </div>
+      <div>
+        <span class="label">Velocity</span>
+        <span class="value" id="velocityReadout">0</span>
+      </div>
+      <div>
+        <span class="label">Terminal estimate</span>
+        <span class="value" id="terminalReadout">0</span>
+      </div>
+      <div>
+        <span class="label">e-multiples</span>
+        <span class="value" id="multipleReadout">0</span>
+      </div>
+      <div>
+        <span class="label">Balance field</span>
+        <span class="value" id="balanceReadout">0</span>
+      </div>
+      <div>
+        <span class="label">Slip factor</span>
+        <span class="value" id="slipReadout">1.00</span>
+      </div>
+    </section>
+
+    <section class="history-card" aria-labelledby="historyTitle">
+      <div class="history-card__header">
+        <h2 id="historyTitle">Trajectory graph</h2>
+        <p>Cyan: height (top plate to bottom). Orange: velocity.</p>
+      </div>
+      <canvas id="historyCanvas" width="720" height="180" aria-label="Drop history graph"></canvas>
+    </section>
+
+    <details class="notes" open>
+      <summary>What is this simulation doing?</summary>
+      <ul>
+        <li>Visually map the plates, field lines, and a charged oil droplet with tunable properties.</li>
+        <li>Integrate the droplet motion with gravity, electric, drag, and Brownian jitter forces.</li>
+        <li>Measure force balance, velocity, and the quantized charge multiple in real time.</li>
+        <li>Interact: click the drop to add/remove charge, pulse the field, or randomize droplets.</li>
+      </ul>
+    </details>
+  </main>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
